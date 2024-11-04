@@ -1,0 +1,77 @@
+* {
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f7f7f7;
+  }
+  
+  .container {
+    max-width: 800px;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+  
+  h1 {
+    color: #333;
+  }
+  
+  .jugadores-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 20px;
+  }
+  
+  .jugador-card {
+    width: 150px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.3s;
+  }
+  
+  .jugador-card:hover {
+    background: #f0f8ff;
+  }
+  
+  .jugador-card img {
+    width: 100%;
+    border-radius: 8px;
+  }
+  
+  .seleccion {
+    margin-top: 20px;
+  }
+  
+  #parejaSeleccionada {
+    list-style: none;
+    padding: 0;
+  }
+  
+  #confirmarBtn {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #28a745;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  
+  #confirmarBtn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }

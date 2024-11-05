@@ -1,0 +1,37 @@
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    text-align: center;
+  }
+  
+  .parejas-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+  }
+  
+  .pareja-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    width: 200px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+  }
+  
+  .pareja-card:hover {
+    transform: scale(1.05);
+  }
+  
+  .pareja-card h3 {
+    margin: 10px 0;
+  }
+  
+  .pareja-card p {
+    margin: 5px 0;
+    font-weight: bold;
+    color: #333;
+  }

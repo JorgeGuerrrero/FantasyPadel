@@ -92,3 +92,21 @@ app.post("/login", async (req, res) => {
     res.status(500).json({ error: "Hubo un problema al iniciar sesión." });
   }
 });
+// Endpoint para obtener las parejas
+app.get("/parejas", (req, res) => {
+  const query = `
+    SELECT p.pareja_id, j1.nombre_jugador AS jugador1, j2.nombre_jugador AS jugador2, 
+           p.ranking_pareja, p.precio 
+    FROM Parejas_Padel p
+    JOIN Jugadores_Padel j1 ON p.jugador1_id = j1.jugador_id
+    JOIN Jugadores_Padel j2 ON p.jugador2_id = j2.jugador_id;
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Error al obtener parejas:", err);
+      return res.status(500).json({ error: "Error al obtener las parejas." });
+    }
+    res.json(results);
+  });
+});

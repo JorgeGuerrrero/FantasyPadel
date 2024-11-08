@@ -110,3 +110,82 @@ app.get("/parejas", (req, res) => {
     res.json(results);
   });
 });
+app.post("/comprar", (req, res) => {
+  const { usuarioId, parejaId } = req.body;
+
+  // Consultar el precio de la pareja
+  const queryPareja = "SELECT precio FROM Parejas_Padel WHERE pareja_id = ?";
+  db.query(queryPareja, [parejaId], (err, parejaResult) => {
+    if (err) {
+      console.error("Error al obtener precio de la pareja:", err);
+      return res.status(500).json({ error: "Error en la compra." });
+    }
+
+    if (parejaResult.length === 0) {
+      return res.status(404).json({ error: "Pareja no encontrada." });
+    }
+
+    const precioPareja = parejaResult[0].precio;
+
+    // Consultar el saldo del usuario
+    const queryUsuario = "SELECT saldo FROM Usuarios WHERE usuario_id = ?";
+    db.query(queryUsuario, [usuarioId], (err, usuarioResult) => {
+      if (err) {
+        console.error("Error al obtener saldo del usuario:", err);
+        return res.status(500).json({ error: "Error en la compra." });
+      }
+
+      if (usuarioResult.length === 0) {
+        return res.status(404).json({ error: "Usuario no encontrado." });
+      }
+
+      const saldoUsuario = usuarioResult[0].saldo;
+
+      // Verificar si el saldo es suficiente
+      if (saldoUsuario < precioPareja) {
+        return res.status(400).json({ error: "Saldo insuficiente para realizar la compra." });
+      }
+
+      // Descontar el saldo del usuario
+      const nuevoSaldo = saldoUsuario - precioPareja;
+      const updateSaldoQuery = "UPDATE Usuarios SET saldo = ? WHERE usuario_id = ?";
+      db.query(updateSaldoQuery, [nuevoSaldo, usuarioId], (err) => {
+        if (err) {
+          console.error("Error al actualizar el saldo:", err);
+          return res.status(500).json({ error: "Error al procesar la compra." });
+        }
+
+        // Registrar la pareja comprada en Equipo_Pareja
+        const insertParejaQuery = "INSERT INTO Equipo_Pareja (usuario_id, pareja_id) VALUES (?, ?)";
+        db.query(insertParejaQuery, [usuarioId, parejaId], (err) => {
+          if (err) {
+            console.error("Error al registrar la pareja comprada en Equipo_Pareja:", err);
+            return res.status(500).json({ error: "Error al registrar la compra." });
+          }
+
+          res.json({ success: true, message: "Compra realizada con éxito. Saldo restante: " + nuevoSaldo });
+        });
+      });
+    });
+  });
+});
+app.get("/parejas-compradas", (req, res) => {
+  const usuarioId = req.query.usuarioId;  // Suponemos que el usuarioId se envía como parámetro de consulta
+
+  const query = `
+    SELECT p.pareja_id, j1.nombre_jugador AS jugador1, j2.nombre_jugador AS jugador2, p.ranking_pareja, p.precio
+    FROM Equipo_Pareja ep
+    JOIN Parejas_Padel p ON ep.pareja_id = p.pareja_id
+    JOIN Jugadores_Padel j1 ON p.jugador1_id = j1.jugador_id
+    JOIN Jugadores_Padel j2 ON p.jugador2_id = j2.jugador_id
+    WHERE ep.usuario_id = ?
+  `;
+
+  db.query(query, [usuarioId], (err, results) => {
+    if (err) {
+      console.error("Error al obtener las parejas compradas:", err);
+      return res.status(500).json({ error: "Error al obtener las parejas compradas." });
+    }
+    res.json(results);  // Devolver las parejas en formato JSON
+  });
+});

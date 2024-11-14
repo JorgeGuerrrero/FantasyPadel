@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Pádel - Principal</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #f1c40f;
+        }
+        .header {
+            background-color: #333;
+            padding: 10px 0;
+        }
+        .header img {
+            height: 50px;
+        }
+        .header .nav-link {
+            color: #f1c40f;
+        }
+        .main-content {
+            padding: 20px;
+        }
+        .pitch-container {
+            background: url('/imagenes/07.jpg') no-repeat center center;
+            background-size: cover;
+            height: 400px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .team-box {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            width: 150px;
+            position: absolute;
+        }
+        .team-left {
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+        }
+        .team-right {
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+        }
+        .ranking,
+        .pair-list {
+            background-color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            height: 400px;
+            overflow-y: auto;
+        }
+        .ranking-item,
+        .pair-item {
+            padding: 10px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #f1c40f;
+        }
+        .pair-item button {
+            margin-top: 5px;
+        }
+        .selected-pairs {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container d-flex justify-content-between align-items-center">
+            <img src="/imagenes/LOGO.png" alt="Logo de Fantasy Pádel">
+            <nav class="nav">
+                <a href="#" class="nav-link">Contacto</a>
+                <a href="#" class="nav-link">Torneos</a>
+                <a href="#" class="nav-link">Clasificación</a>
+                <a href="#" class="nav-link">Liga</a>
+                <a href="#" class="nav-link">Jugadores</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content container">
+        <div class="row">
+            <!-- Ranking -->
+            <div class="col-md-3">
+                <div class="ranking">
+                    <h4>Clasificación</h4>
+                    <div id="rankingList">
+                        <!-- Elementos de clasificación generados dinámicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pista de Pádel -->
+            <div class="col-md-6">
+    
+
+                <!-- Tarjetas de Parejas Seleccionadas -->
+                <div class="selected-pairs row" id="selectedPairs">
+                    <!-- Las tarjetas de parejas seleccionadas se generarán aquí dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Lista de Parejas -->
+            <div class="col-md-3">
+                <div class="pair-list">
+                    <h4>Parejas Disponibles</h4>
+                    <div id="availablePairs">
+                        <!-- Lista de parejas disponibles generada dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        let selectedPairs = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Cargar parejas disponibles
+            fetch('parejas_disponibles.json')
+                .then(response => response.json())
+                .then(data => {
+                    const availablePairsContainer = document.getElementById('availablePairs');
+
+                    data.parejas.forEach(pareja => {
+                        // Crear el elemento de pareja disponible
+                        const pairItem = document.createElement('div');
+                        pairItem.classList.add('pair-item');
+
+                        const pairInfo = document.createElement('p');
+                        pairInfo.innerText = `${pareja.jugador_1} & ${pareja.jugador_2}`;
+
+                        // Botón para seleccionar la pareja
+                        const selectButton = document.createElement('button');
+                        selectButton.classList.add('btn', 'btn-warning', 'btn-sm');
+                        selectButton.innerText = 'Seleccionar';
+                        selectButton.onclick = () => selectPair(pareja);
+
+                        // Añadir pareja y botón al elemento
+                        pairItem.appendChild(pairInfo);
+                        pairItem.appendChild(selectButton);
+
+                        // Añadir el elemento al contenedor
+                        availablePairsContainer.appendChild(pairItem);
+                    });
+                })
+                .catch(error => console.error('Error al cargar el archivo JSON de parejas disponibles:', error));
+
+            // Cargar la clasificación
+            fetch('clasificacion.json')
+                .then(response => response.json())
+                .then(data => {
+                    const rankingListContainer = document.getElementById('rankingList');
+                    
+                    data.clasificacion.forEach((usuario, index) => {
+                        // Crear el elemento de clasificación
+                        const rankingItem = document.createElement('div');
+                        rankingItem.classList.add('ranking-item');
+                        rankingItem.innerText = `${index + 1}. ${usuario.nombre} - ${usuario.puntos} puntos`;
+                        
+                        // Añadir el elemento al contenedor de clasificación
+                        rankingListContainer.appendChild(rankingItem);
+                    });
+                })
+                .catch(error => console.error('Error al cargar el archivo JSON de clasificación:', error));
+        });
+
+        function selectPair(pareja) {
+            if (selectedPairs.length >= 4) {
+                alert("Solo puedes seleccionar hasta 4 parejas.");
+                return;
+            }
+
+            selectedPairs.push(pareja);
+            updateSelectedPairs();
+        }
+
+        function updateSelectedPairs() {
+            const selectedPairsContainer = document.getElementById('selectedPairs');
+            selectedPairsContainer.innerHTML = ''; // Limpiar contenido previo
+
+            selectedPairs.forEach((pareja, index) => {
+                // Crear el contenedor de la tarjeta
+                const cardCol = document.createElement('div');
+                cardCol.classList.add('col-md-6');
+
+                // Crear la tarjeta de Bootstrap
+                const card = document.createElement('div');
+                card.classList.add('card', 'bg-dark', 'text-light', 'mb-3');
+
+                const cardBody = document.createElement('div');
+                cardBody.classList.add('card-body');
+
+                const cardTitle = document.createElement('h5');
+                cardTitle.classList.add('card-title');
+                cardTitle.innerText = `Pareja ${index + 1}`;
+
+                const cardText = document.createElement('p');
+                cardText.classList.add('card-text');
+                cardText.innerText = `${pareja.jugador_1} & ${pareja.jugador_2}`;
+
+                // Armar la tarjeta
+                cardBody.appendChild(cardTitle);
+                cardBody.appendChild(cardText);
+                card.appendChild(cardBody);
+                cardCol.appendChild(card);
+
+                // Añadir la tarjeta al contenedor principal
+                selectedPairsContainer.appendChild(cardCol);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -4,15 +4,18 @@ const bcrypt = require("bcryptjs");
 const cors = require("cors");
 
 const app = express();
+
+// Configuración de middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(__dirname + '/public'));
 
 // Configuración de conexión a la base de datos MySQL
 const db = mysql.createConnection({
-  host: "localhost", // Cambia a tu configuración de XAMPP si es necesario
+  host: "localhost",
   user: "root",
   password: "",
-  database: "fantasy_padel", // Nombre de tu base de datos
+  database: "fantasy_padel",
 });
 
 db.connect((err) => {
@@ -27,16 +30,12 @@ db.connect((err) => {
 app.post("/register", async (req, res) => {
   const { username, email, password } = req.body;
 
-  // Validación básica
   if (!username || !email || !password) {
     return res.status(400).json({ error: "Todos los campos son obligatorios." });
   }
 
   try {
-    // Encriptar la contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insertar el nuevo usuario en la base de datos
     const query = "INSERT INTO Usuarios (nombre_usuario, email, contraseña) VALUES (?, ?, ?)";
     db.query(query, [username, email, hashedPassword], (err, result) => {
       if (err) {
@@ -52,46 +51,38 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// Iniciar el servidor
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Servidor corriendo en http://localhost:${PORT}`));
 // Endpoint de inicio de sesión
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  // Verificar que el email y la contraseña no estén vacíos
   if (!email || !password) {
     return res.status(400).json({ error: "Todos los campos son obligatorios." });
   }
 
   try {
-    // Buscar el usuario en la base de datos
     const query = "SELECT * FROM Usuarios WHERE email = ?";
     db.query(query, [email], async (err, results) => {
       if (err) {
         return res.status(500).json({ error: "Error en el servidor." });
       }
-      
+
       if (results.length === 0) {
-        // No se encontró un usuario con ese email
         return res.status(400).json({ error: "Usuario o contraseña incorrectos" });
       }
 
       const user = results[0];
-
-      // Verificar la contraseña
       const passwordMatch = await bcrypt.compare(password, user.contraseña);
       if (!passwordMatch) {
         return res.status(400).json({ error: "Usuario o contraseña incorrectos" });
       }
 
-      // Inicio de sesión exitoso
-      res.status(200).json({ success: true, message: "Inicio de sesión exitoso" });
+      res.status(200).json({ success: true, usuarioId: user.usuario_id, message: "Inicio de sesión exitoso" });
     });
   } catch (error) {
     res.status(500).json({ error: "Hubo un problema al iniciar sesión." });
   }
 });
+
 // Endpoint para obtener las parejas
 app.get("/parejas", (req, res) => {
   const query = `
@@ -110,10 +101,35 @@ app.get("/parejas", (req, res) => {
     res.json(results);
   });
 });
-app.post("/comprar", (req, res) => {
-  const { usuarioId, parejaId } = req.body;
 
-  // Consultar el precio de la pareja
+// Endpoint para crear equipo
+app.post("/crear-equipo", (req, res) => {
+  const { usuarioId, nombreEquipo } = req.body;
+
+  if (!usuarioId || !nombreEquipo) {
+    return res.status(400).json({ error: "Usuario ID y nombre del equipo son requeridos." });
+  }
+
+  const crearEquipoQuery = "INSERT INTO Equipos (usuario_id, nombre_equipo) VALUES (?, ?)";
+  db.query(crearEquipoQuery, [usuarioId, nombreEquipo], (err, result) => {
+    if (err) {
+      console.error("Error al crear el equipo:", err);
+      return res.status(500).json({ error: "Error al crear el equipo." });
+    }
+
+    res.json({ success: true, message: "Equipo creado con éxito.", equipoId: result.insertId });
+  });
+});
+
+// Endpoint para realizar la compra de una pareja
+app.post("/comprar", (req, res) => {
+  const { usuarioId, equipoId, parejaId } = req.body;
+
+  if (!usuarioId || !equipoId || !parejaId) {
+    console.log("Faltan parámetros en la solicitud");
+    return res.status(400).json({ error: "Faltan parámetros en la solicitud." });
+  }
+
   const queryPareja = "SELECT precio FROM Parejas_Padel WHERE pareja_id = ?";
   db.query(queryPareja, [parejaId], (err, parejaResult) => {
     if (err) {
@@ -125,9 +141,7 @@ app.post("/comprar", (req, res) => {
       return res.status(404).json({ error: "Pareja no encontrada." });
     }
 
-    const precioPareja = parejaResult[0].precio;
-
-    // Consultar el saldo del usuario
+    const precioPareja = parseFloat(parejaResult[0].precio);
     const queryUsuario = "SELECT saldo FROM Usuarios WHERE usuario_id = ?";
     db.query(queryUsuario, [usuarioId], (err, usuarioResult) => {
       if (err) {
@@ -139,14 +153,12 @@ app.post("/comprar", (req, res) => {
         return res.status(404).json({ error: "Usuario no encontrado." });
       }
 
-      const saldoUsuario = usuarioResult[0].saldo;
+      const saldoUsuario = parseFloat(usuarioResult[0].saldo);
 
-      // Verificar si el saldo es suficiente
       if (saldoUsuario < precioPareja) {
         return res.status(400).json({ error: "Saldo insuficiente para realizar la compra." });
       }
 
-      // Descontar el saldo del usuario
       const nuevoSaldo = saldoUsuario - precioPareja;
       const updateSaldoQuery = "UPDATE Usuarios SET saldo = ? WHERE usuario_id = ?";
       db.query(updateSaldoQuery, [nuevoSaldo, usuarioId], (err) => {
@@ -155,12 +167,11 @@ app.post("/comprar", (req, res) => {
           return res.status(500).json({ error: "Error al procesar la compra." });
         }
 
-        // Registrar la pareja comprada en Equipo_Pareja
-        const insertParejaQuery = "INSERT INTO Equipo_Pareja (usuario_id, pareja_id) VALUES (?, ?)";
-        db.query(insertParejaQuery, [usuarioId, parejaId], (err) => {
+        const insertParejaQuery = "INSERT INTO Equipo_Pareja (equipo_id, usuario_id, pareja_id) VALUES (?, ?, ?)";
+        db.query(insertParejaQuery, [equipoId, usuarioId, parejaId], (err) => {
           if (err) {
-            console.error("Error al registrar la pareja comprada en Equipo_Pareja:", err);
-            return res.status(500).json({ error: "Error al registrar la compra." });
+            console.error("Error al registrar la pareja comprada en Equipo_Pareja:", err.message);
+            return res.status(500).json({ error: "Error al registrar la compra. Detalle: " + err.message });
           }
 
           res.json({ success: true, message: "Compra realizada con éxito. Saldo restante: " + nuevoSaldo });
@@ -169,8 +180,33 @@ app.post("/comprar", (req, res) => {
     });
   });
 });
+
+// Endpoint para obtener el equipo de un usuario
+app.get("/obtener-equipo", (req, res) => {
+  const usuarioId = req.query.usuarioId;
+
+  if (!usuarioId) {
+    return res.status(400).json({ error: "Falta el ID de usuario." });
+  }
+
+  const query = "SELECT equipo_id FROM Equipos WHERE usuario_id = ?";
+  db.query(query, [usuarioId], (err, result) => {
+    if (err) {
+      console.error("Error al obtener el equipo:", err);
+      return res.status(500).json({ error: "Error al obtener el equipo del usuario." });
+    }
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: "Equipo no encontrado para el usuario." });
+    }
+
+    res.json({ equipoId: result[0].equipo_id });
+  });
+});
+
+// Endpoint para obtener las parejas compradas por un usuario
 app.get("/parejas-compradas", (req, res) => {
-  const usuarioId = req.query.usuarioId;  // Suponemos que el usuarioId se envía como parámetro de consulta
+  const usuarioId = req.query.usuarioId;
 
   const query = `
     SELECT p.pareja_id, j1.nombre_jugador AS jugador1, j2.nombre_jugador AS jugador2, p.ranking_pareja, p.precio
@@ -186,6 +222,13 @@ app.get("/parejas-compradas", (req, res) => {
       console.error("Error al obtener las parejas compradas:", err);
       return res.status(500).json({ error: "Error al obtener las parejas compradas." });
     }
-    res.json(results);  // Devolver las parejas en formato JSON
+    res.json(results);
   });
 });
+
+// Iniciar el servidor en el puerto 5000
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+});
+

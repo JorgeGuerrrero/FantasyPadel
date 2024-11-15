@@ -26,12 +26,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
 
       if (response.ok) {
-        alert("Inicio de sesión exitoso. Redirigiendo...");
-        // Redirigir a la página principal del juego
-        window.location.href = "/main";
-      } else {
-        throw new Error(result.error || "Usuario o contraseña incorrectos");
-      }
+        // Guardar el usuarioId en el Local Storage
+        localStorage.setItem("usuarioId", result.usuarioId);
+        alert("Inicio de sesión exitoso. Redirigiendo al mercado...");
+        window.location.href = "/mercado.html";  // Redirigir a la página del mercado
+    } else {
+        alert(result.error || "Error de inicio de sesión");
+    }
+    
     } catch (error) {
       errorMessage.style.display = "block";
       errorMessage.textContent = error.message;

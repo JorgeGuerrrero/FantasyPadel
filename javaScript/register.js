@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", () => {
   const registerForm = document.getElementById("registerForm");
   const errorMessage = document.getElementById("error-message");
@@ -48,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
       if (response.ok) {
         alert("Registro exitoso. Redirigiendo a inicio de sesión...");
-        window.location.href = "/login";
+        window.location.href = "/users.html";
       } else {
         throw new Error(result.error);
       }
